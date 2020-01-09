@@ -1,6 +1,7 @@
-from odf.opendocument import OpenDocument
-from odf import style, text
+import sys
+from odf.opendocument import load 
 
-if __name__ == "__main__":
-    doc = OpenDocument()
+infile = sys.argv[1]
 
+doc = load(infile)
+print(doc.body())
