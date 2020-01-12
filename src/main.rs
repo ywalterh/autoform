@@ -1,12 +1,11 @@
+use std::error::Error;
 use std::fs;
 use std::path::Path;
-use std::error::Error;
 
 fn main() {
     // interesting patterns to manipulate filename
     std::process::exit(real_main());
 }
-
 
 fn real_main() -> i32 {
     // Parse input arguments
@@ -19,22 +18,26 @@ fn real_main() -> i32 {
     let file_name = Path::new(&*args[1]);
     println!("Parsing {}", file_name.display());
     match unzip_odf(file_name) {
-        Err(err)  => {
+        Err(err) => {
             println!("Error: {}", err);
             return 1;
         }
-        Ok(()) => ()
+        Ok(()) => (),
     };
     return 0;
 }
 
-fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>>{
+fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let file = fs::File::open(file_name)?;
     let mut archive = zip::ZipArchive::new(file)?;
 
     for i in 0..archive.len() {
         let file = archive.by_index(i).unwrap();
-        println!("File #{} : {}", i,  file.sanitized_name().as_path().display());
+        println!(
+            "File #{} : {}",
+            i,
+            file.sanitized_name().as_path().display()
+        );
     }
 
     return Ok(());
