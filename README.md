@@ -10,6 +10,10 @@ Use AI to auto format slides based on existing odf slides
  * [ ] Use a randomizing algorithm to style the slides 
 
 
+## Build
+
+### Windows
+ `scoop install gcc`
 
 ## References
 * How to avoid unwrap (https://dmerej.info/blog/post/killing-unwrap/)
