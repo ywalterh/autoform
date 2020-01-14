@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fs;
+use std::io::prelude::*;
 use std::path::Path;
 
 fn main() {
@@ -30,15 +31,12 @@ fn real_main() -> i32 {
 fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let file = fs::File::open(file_name)?;
     let mut archive = zip::ZipArchive::new(file)?;
+    let mut file = archive.by_name("content.xml")?;
 
-    for i in 0..archive.len() {
-        let file = archive.by_index(i).unwrap();
-        println!(
-            "File #{} : {}",
-            i,
-            file.sanitized_name().as_path().display()
-        );
-    }
+    // print out the entire string of xml file
+    let mut xml_content_buffer = String::new();
+    file.read_to_string(&mut xml_content_buffer)?;
+    println!("{}", xml_content_buffer);
 
     return Ok(());
 }
