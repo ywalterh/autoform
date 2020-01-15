@@ -49,14 +49,21 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     // The `Reader` does not implement `Iterator` because it outputs borrowed data (`Cow`s)
     loop {
         match reader.read_event(&mut buf) {
-            Ok(Event::Start(ref e)) => match e.name() {
-                b"tag1" => println!(
+            Ok(Event::Start(ref e)) => {
+                println!("tag name is {}", std::str::from_utf8(e.name()).unwrap());
+                println!(
                     "attributes values: {:?}",
-                    e.attributes().map(|a| a.unwrap().value).collect::<Vec<_>>()
-                ),
-                b"text:list-style" => count += 1,
-                _ => (),
-            },
+                    e.attributes().map(|a| std::str::from_utf8(a.unwrap().key).unwrap()).collect::<Vec<_>>()
+                );
+                match e.name() {
+                    b"tag1" => println!(
+                        "attributes values: {:?}",
+                        e.attributes().map(|a| a.unwrap().value).collect::<Vec<_>>()
+                    ),
+                    b"text:list-style" => count += 1,
+                    _ => (),
+                }
+            }
             Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&reader).unwrap()),
             Ok(Event::Eof) => break, // exits the loop when reaching end of file
             Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
