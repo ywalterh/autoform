@@ -1,5 +1,6 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use std::borrow::Cow;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
@@ -42,27 +43,30 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let mut reader = Reader::from_str(xml_content_buffer.as_str());
     reader.trim_text(true);
 
-    let mut count = 0;
     let mut txt = Vec::new();
     let mut buf = Vec::new();
 
     // The `Reader` does not implement `Iterator` because it outputs borrowed data (`Cow`s)
     loop {
+        // let's match attributes with svg: ... and then modify it in place
+        // hopefully it's doable
         match reader.read_event(&mut buf) {
             Ok(Event::Start(ref e)) => {
                 println!("tag name is {}", std::str::from_utf8(e.name()).unwrap());
-                println!(
-                    "attributes values: {:?}",
-                    e.attributes().map(|a| std::str::from_utf8(a.unwrap().key).unwrap()).collect::<Vec<_>>()
-                );
-                match e.name() {
-                    b"tag1" => println!(
-                        "attributes values: {:?}",
-                        e.attributes().map(|a| a.unwrap().value).collect::<Vec<_>>()
-                    ),
-                    b"text:list-style" => count += 1,
-                    _ => (),
-                }
+                let updated_attributes = e
+                    .attributes()
+                    .map(|a| {
+                        let mut attribute = a.unwrap();
+                        let key = std::str::from_utf8(attribute.key).unwrap();
+                        if key.contains("svg:") {
+                            let mut value_to_udpate = &attribute.value.to_mut();
+                            value_to_udpate = "1cm".bytes();
+                        }
+
+                        return attribute;
+                    })
+                    .collect::<Vec<_>>();
+                dbg!(updated_attributes);
             }
             Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&reader).unwrap()),
             Ok(Event::Eof) => break, // exits the loop when reaching end of file
@@ -74,6 +78,5 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
         buf.clear();
     }
 
-    println!("Found text:list-style {} times", count);
     return Ok(());
 }
