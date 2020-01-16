@@ -37,13 +37,35 @@ fn real_main() -> i32 {
 fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let zipfile = fs::File::open(file_name)?;
     let mut archive = zip::ZipArchive::new(&zipfile)?;
-    let mut file = archive.by_name("content.xml")?;
 
-    // print out the entire string of xml file
-    let mut xml_content_buffer = String::new();
-    file.read_to_string(&mut xml_content_buffer)?;
 
-    let mut reader = Reader::from_str(xml_content_buffer.as_str());
+    // With the resulting content.xml, now it's time to duplicate files from the zips
+    let path = std::path::Path::new("./updated.odp");
+    let file = std::fs::File::create(&path).unwrap();
+    let mut zip = zip::ZipWriter::new(file);
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored).unix_permissions(0o755);
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        if file.name() == "content.xml" {
+            let mut xml_content_buffer = String::new();
+            file.read_to_string(&mut xml_content_buffer)?;
+            zip.start_file("content.xml", options)?;
+            zip.write_all(&update_content_xml(&xml_content_buffer))?;
+        } else {
+            let mut buf = Vec::new(); 
+            file.read_to_end(&mut buf)?;
+            zip.start_file(file.name(), options)?; 
+            zip.write(&buf)?;
+        }
+    }
+    
+    zip.finish()?;
+    return Ok(());
+}
+
+fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8>{
+    let mut reader = Reader::from_str(xml_content_buffer);
     reader.trim_text(true);
 
     let mut writer = Writer::new(Cursor::new(Vec::new()));
@@ -90,11 +112,5 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
         buf.clear();
     }
 
-    let result = writer.into_inner().into_inner();
-    let mut zip = zip::ZipWriter::new(&zipfile);
-    let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored).unix_permissions(0o755);
-    zip.start_file("content.xml", options)?;
-    zip.write_all(&result)?;
-    zip.finish()?;
-    return Ok(());
+    return writer.into_inner().into_inner();
 }
