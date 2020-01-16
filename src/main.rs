@@ -1,13 +1,16 @@
+extern crate rand;
+
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Reader;
 use quick_xml::Writer;
-use std::borrow::Cow;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::path::Path;
 use zip::write::FileOptions;
+use rand::Rng;
+use std::borrow::Cow;
 
 fn main() {
     // interesting patterns to manipulate filename
@@ -65,6 +68,8 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
 }
 
 fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8>{
+    let mut rng = rand::thread_rng();
+
     let mut reader = Reader::from_str(xml_content_buffer);
     reader.trim_text(true);
 
@@ -90,10 +95,12 @@ fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8>{
                     let mut attribute = attr.unwrap();
                     let key = std::str::from_utf8(attribute.key).unwrap();
                     if key.contains("svg:") {
-                        attribute.value =Cow::Borrowed(b"1cm");
+                        let random_s: String = format!("{}cm", rng.gen_range(1, 20));
+                        println!("Setting {} to {}", key , random_s);
+                        attribute.value = Cow::Owned(random_s.into_bytes());
                     }
 
-                    return attribute;
+                    attribute
                 }));
 
                 assert!(writer.write_event(Event::Start(elem)).is_ok());
