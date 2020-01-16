@@ -1,9 +1,11 @@
-use quick_xml::events::Event;
+use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Reader;
+use quick_xml::Writer;
 use std::borrow::Cow;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
+use std::io::Cursor;
 use std::path::Path;
 
 fn main() {
@@ -43,7 +45,9 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let mut reader = Reader::from_str(xml_content_buffer.as_str());
     reader.trim_text(true);
 
-    let mut txt = Vec::new();
+    let mut writer = Writer::new(Cursor::new(Vec::new()));
+
+    //let mut txt = Vec::new();
     let mut buf = Vec::new();
 
     // The `Reader` does not implement `Iterator` because it outputs borrowed data (`Cow`s)
@@ -52,31 +56,42 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
         // hopefully it's doable
         match reader.read_event(&mut buf) {
             Ok(Event::Start(ref e)) => {
-                println!("tag name is {}", std::str::from_utf8(e.name()).unwrap());
-                let updated_attributes = e
-                    .attributes()
-                    .map(|a| {
-                        let mut attribute = a.unwrap();
-                        let key = std::str::from_utf8(attribute.key).unwrap();
-                        if key.contains("svg:") {
-                            let mut value_to_udpate = &attribute.value.to_mut();
-                            value_to_udpate = "1cm".bytes();
-                        }
+                // Let's copy it for now, not sure if it's feasible to
+                // do in place update
+                let mut elem = BytesStart::owned(e.name(), e.name().len());
 
-                        return attribute;
-                    })
-                    .collect::<Vec<_>>();
-                dbg!(updated_attributes);
+                // push existing elem along, but perform inplace update
+                // if attribute contains svg: like settings
+                // assuming them to be cm for now
+                elem.extend_attributes(e.attributes().map(|attr| {
+                    let mut attribute = attr.unwrap();
+                    let key = std::str::from_utf8(attribute.key).unwrap();
+                    if key.contains("svg:") {
+                        attribute.value =Cow::Borrowed(b"1cm");
+                    }
+
+                    return attribute;
+                }));
+
+                assert!(writer.write_event(Event::Start(elem)).is_ok());
             }
-            Ok(Event::Text(e)) => txt.push(e.unescape_and_decode(&reader).unwrap()),
+            Ok(Event::End(ref e)) => {
+                assert!(writer
+                    .write_event(Event::End(BytesEnd::borrowed(e.name())))
+                    .is_ok());
+            }
             Ok(Event::Eof) => break, // exits the loop when reaching end of file
+            Ok(e) => assert!(writer.write_event(&e).is_ok()),
             Err(e) => panic!("Error at position {}: {:?}", reader.buffer_position(), e),
-            _ => (), // There are several other `Event`s we do not consider here
         }
 
         // if we don't keep a borrow elsewhere, we can clear the buffer to keep memory usage low
         buf.clear();
     }
 
+    let result = writer.into_inner().into_inner();
+    let resulting_xml = std::str::from_utf8(&result).unwrap();
+
+    println!("{}", resulting_xml);
     return Ok(());
 }
