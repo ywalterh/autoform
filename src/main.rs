@@ -7,6 +7,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::path::Path;
+use zip::write::FileOptions;
 
 fn main() {
     // interesting patterns to manipulate filename
@@ -34,8 +35,8 @@ fn real_main() -> i32 {
 }
 
 fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
-    let file = fs::File::open(file_name)?;
-    let mut archive = zip::ZipArchive::new(file)?;
+    let zipfile = fs::File::open(file_name)?;
+    let mut archive = zip::ZipArchive::new(&zipfile)?;
     let mut file = archive.by_name("content.xml")?;
 
     // print out the entire string of xml file
@@ -90,8 +91,10 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     }
 
     let result = writer.into_inner().into_inner();
-    let resulting_xml = std::str::from_utf8(&result).unwrap();
-
-    println!("{}", resulting_xml);
+    let mut zip = zip::ZipWriter::new(&zipfile);
+    let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored).unix_permissions(0o755);
+    zip.start_file("content.xml", options)?;
+    zip.write_all(&result)?;
+    zip.finish()?;
     return Ok(());
 }
