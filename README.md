@@ -6,10 +6,10 @@ Use AI to auto format slides based on existing odf slides
  * [x] Move to rust repo
  * [x] Use zip library to unzip the content  
  * [x] Added XML parsing library 
- * [ ] Attempt to retrieve properties related to svg: position and size elements 
- * [ ] Manipulate content.xml file to move things around 
- * [ ] Save it back to odp format 
- * [ ] Use a randomizing algorithm to style the slides 
+ * [x] Attempt to retrieve properties related to svg: position and size elements 
+ * [x] Manipulate content.xml file to move things around 
+ * [x] Save it back to odp format 
+ * [x] Use a randomizing algorithm to style the slides 
 
 
 ## Build
