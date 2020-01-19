@@ -3,14 +3,17 @@ extern crate rand;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::Reader;
 use quick_xml::Writer;
+use rand::Rng;
+use std::borrow::Cow;
 use std::error::Error;
 use std::fs;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::path::Path;
 use zip::write::FileOptions;
-use rand::Rng;
-use std::borrow::Cow;
+
+// import neural network module
+mod nn;
 
 fn main() {
     // interesting patterns to manipulate filename
@@ -41,12 +44,13 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     let zipfile = fs::File::open(file_name)?;
     let mut archive = zip::ZipArchive::new(&zipfile)?;
 
-
     // With the resulting content.xml, now it's time to duplicate files from the zips
     let path = std::path::Path::new("./updated.odp");
     let file = std::fs::File::create(&path).unwrap();
     let mut zip = zip::ZipWriter::new(file);
-    let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored).unix_permissions(0o755);
+    let options = FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .unix_permissions(0o755);
 
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
@@ -56,18 +60,18 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
             zip.start_file("content.xml", options)?;
             zip.write_all(&update_content_xml(&xml_content_buffer))?;
         } else {
-            let mut buf = Vec::new(); 
+            let mut buf = Vec::new();
             file.read_to_end(&mut buf)?;
-            zip.start_file(file.name(), options)?; 
+            zip.start_file(file.name(), options)?;
             zip.write(&buf)?;
         }
     }
-    
+
     zip.finish()?;
     return Ok(());
 }
 
-fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8>{
+fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
     let mut rng = rand::thread_rng();
 
     let mut reader = Reader::from_str(xml_content_buffer);
@@ -96,7 +100,7 @@ fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8>{
                     let key = std::str::from_utf8(attribute.key).unwrap();
                     if key.contains("svg:") {
                         let random_s: String = format!("{}cm", rng.gen_range(1, 20));
-                        println!("Setting {} to {}", key , random_s);
+                        println!("Setting {} to {}", key, random_s);
                         attribute.value = Cow::Owned(random_s.into_bytes());
                     }
 
