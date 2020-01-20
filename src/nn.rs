@@ -1,5 +1,7 @@
+extern crate ndarray;
+
 use fastapprox::fast::sigmoid;
-use ndarray::Array2;
+use ndarray::{arr2, Array2};
 use rand::prelude::*;
 
 #[cfg(test)]
@@ -40,6 +42,24 @@ mod tests {
         let result = Network::array2_sigmoid_derivative(&input_x);
         assert_eq!(result.len(), 1);
         assert_ne!(result[[0, 0]], 1_f32);
+    }
+
+    #[test]
+    fn test_training() {
+        let x = arr2(&[[0_f32, 0_f32, 1_f32],
+                         [0_f32, 1_f32, 1_f32],
+                         [1_f32, 0_f32, 1_f32],
+                         [1_f32, 1_f32, 1_f32]]);
+
+        let y = arr2(&[[0_f32], [1_f32], [1_f32], [0_f32]]);
+
+        let mut network = Network::new(x, y);
+        network.feed_forward();
+        network.back_propagation(); 
+
+        print!("{}", network.output);
+        print!("{}", network.y);
+        assert_eq!(0, 1);
     }
 }
 
@@ -123,14 +143,11 @@ impl Network {
         // application of the chain rule to find derivative of the loss function with respect to weights2 and weights1
         let z = 2_f32 * (&self.y - &self.output) * Network::array2_sigmoid_derivative(&self.output);
         let d_weights2 = self.layer1.t().dot(&z);
-        dbg!(&self.input.t());
-        dbg!(&self.weights2.t());
         
         let d_weights1 = self
             .input.t()
             .dot(&(z.dot(&self.weights2.t()) * Network::array2_sigmoid_derivative(&self.layer1)));
 
-        dbg!(&d_weights1);
         self.weights1 = &self.weights1 + &d_weights1;
         self.weights2 = &self.weights2 + &d_weights2;
     }
