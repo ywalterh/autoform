@@ -9,6 +9,6 @@ edition = "2018"
 [dependencies]
 zip = "0.5.4"
 quick-xml = "0.17.2"
-fastapprox = "0.3.0"
 rand = "0.7.3"
 ndarray = "0.12.1"
+approx = "0.3.2"
