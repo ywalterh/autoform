@@ -1,6 +1,5 @@
 extern crate ndarray;
 
-use fastapprox::fast::sigmoid;
 use ndarray::{arr2, Array2};
 use rand::prelude::*;
 
@@ -10,11 +9,15 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let x = Array2::<f32>::zeros((1, 3));
-        let y = Array2::<f32>::ones((1, 1));
+        let x = arr2(&[[0_f32, 0_f32, 1_f32],
+                         [0_f32, 1_f32, 1_f32],
+                         [1_f32, 0_f32, 1_f32],
+                         [1_f32, 1_f32, 1_f32]]);
+
+        let y = arr2(&[[0_f32], [1_f32], [1_f32], [0_f32]]);
         let mut result = Network::new(x, y);
 
-        assert_eq!(result.output.shape()[0], 1);
+        assert_eq!(result.output.shape()[0], 4);
 
         // in reality, this is a 3x4 array, so len is 4
         assert_eq!(result.weights1.len(), 12);
@@ -29,6 +32,9 @@ mod tests {
         let before_propagate = result.weights2[[0,0]];
         result.back_propagation();
         assert_ne!(result.weights2[[0,0]], before_propagate);
+
+        dbg!(&result);
+        assert_ne!(0, 0);
     }
 
     #[test]
@@ -45,7 +51,22 @@ mod tests {
     }
 
     #[test]
-    fn test_training() {
+    fn test_get_2d_array_of_matrix() {
+        let x = arr2(&[[0_f32, 0_f32, 1_f32],
+                     [0_f32, 1_f32, 1_f32],
+                     [1_f32, 0_f32, 1_f32],
+                     [1_f32, 1_f32, 1_f32]]);
+
+        assert_eq!(Network::get_2d_array_of_matrix(&x, 1), arr2(&[[0_f32, 1_f32, 1_f32]]));
+    }
+    
+    #[test]
+    fn test_single() {
+        //0, 0, 1 -> 0
+        //0, 1, 1 -> 1,
+        //1, 0, 1 -> 1,
+        //1, 1, 1 -> 0
+
         let x = arr2(&[[0_f32, 0_f32, 1_f32],
                          [0_f32, 1_f32, 1_f32],
                          [1_f32, 0_f32, 1_f32],
@@ -54,11 +75,40 @@ mod tests {
         let y = arr2(&[[0_f32], [1_f32], [1_f32], [0_f32]]);
 
         let mut network = Network::new(x, y);
-        network.feed_forward();
-        network.back_propagation(); 
 
-        print!("{}", network.output);
-        print!("{}", network.y);
+        for _ in 1..5 {
+            network.feed_forward();
+            network.back_propagation();
+        }
+        
+        println!("Actual:\n {}", network.y);
+        println!("Predication:\n {}", network.output);
+        assert_eq!(0, 1);
+    }
+
+    #[test]
+    fn test_training() {
+        //0, 0, 1 -> 0
+        //0, 1, 1 -> 1,
+        //1, 0, 1 -> 1,
+        //1, 1, 1 -> 0
+
+        let x = arr2(&[[0_f32, 0_f32, 1_f32],
+                         [0_f32, 1_f32, 1_f32],
+                         [1_f32, 0_f32, 1_f32],
+                         [1_f32, 1_f32, 1_f32]]);
+
+        let y = arr2(&[[0_f32], [1_f32], [1_f32], [0_f32]]);
+
+        let mut network = Network::new(x, y);
+
+        for _ in 1..50 {
+            network.feed_forward();
+            network.back_propagation(); 
+        }
+        
+        println!("Actual:\n {}", network.y);
+        println!("Predication:\n {}", network.output);
         assert_eq!(0, 1);
     }
 }
@@ -124,32 +174,76 @@ impl Network {
     }
 
     fn feed_forward(&mut self) {
-        self.layer1 = self.input.dot(&self.weights1);
-        for mut row in self.layer1.genrows_mut() {
-            for i in 0..row.len() {
-                row[i] = sigmoid(row[i]);
+        // add the result each iteration  to output
+        let mut cur = 0;
+        for mut output_row in self.output.genrows_mut() {
+            let mut row_2d = Array2::zeros((1, 3));
+            for mut row1 in row_2d.genrows_mut() {
+                for i in 0..row1.len() {
+                    //@Cleanup remove unwrap
+                    row1[i] = *self.input.get((cur, i)).unwrap();
+                }
             }
+
+            self.layer1 = row_2d.dot(&self.weights1);
+            for mut row in self.layer1.genrows_mut() {
+                for i in 0..row.len() {
+                    row[i] = Network::sigmoid(row[i]);
+                }
+            }
+
+            // fill up the resuling 1d array
+            let mut one_d_array = self.layer1.dot(&self.weights2);
+            for mut row in one_d_array.genrows_mut() {
+                row.fill(Network::sigmoid(row[0]));
+            }
+
+            //@Cleanup remoev unwrap
+            output_row.fill(*one_d_array.get((0, 0)).unwrap());
+
+            // increase index
+            cur = cur + 1;
         }
 
-        self.output = self.layer1.dot(&self.weights2);
-        for mut row in self.layer1.genrows_mut() {
+        dbg!(&self.output);
+    }
+
+    fn get_2d_array_of_matrix(x: &Array2<f32>,  index: usize) -> Array2<f32> {
+        let mut row_2d = Array2::<f32>::zeros((1, x.shape()[1]));
+        
+        for mut row in row_2d.genrows_mut() {
             for i in 0..row.len() {
-                row[i] = sigmoid(row[i]);
+                //@Cleanup unwrap
+                row[i] = *x.get((index, i)).unwrap();
             }
         }
+        
+        row_2d
     }
 
     fn back_propagation(&mut self) {
-        // application of the chain rule to find derivative of the loss function with respect to weights2 and weights1
-        let z = 2_f32 * (&self.y - &self.output) * Network::array2_sigmoid_derivative(&self.output);
-        let d_weights2 = self.layer1.t().dot(&z);
-        
-        let d_weights1 = self
-            .input.t()
-            .dot(&(z.dot(&self.weights2.t()) * Network::array2_sigmoid_derivative(&self.layer1)));
+        // application of the chain rule to find derivative of 
+        // the loss function with respect to weights2 and weights1
+        let mut d_weights1_total = Array2::<f32>::zeros((3, 4));
+        let mut d_weights2_total = Array2::<f32>::zeros((4, 1));
 
-        self.weights1 = &self.weights1 + &d_weights1;
-        self.weights2 = &self.weights2 + &d_weights2;
+        let mut cur = 0;
+        for row in self.output.genrows() {
+            //@Cleanup unwrap
+            let cost_derivative = *self.y.get((cur, 0)).unwrap() - row[0];
+            dbg!(&cost_derivative);
+            let z = 2_f32 * cost_derivative * Network::array2_sigmoid_derivative(&Network::get_2d_array_of_matrix(&self.output, cur));
+            let d_weights2 = self.layer1.t().dot(&z);
+
+            let d_weights1 = &(Network::get_2d_array_of_matrix(&self.input, cur).t()).dot(&(z.dot(&self.weights2.t()) * Network::array2_sigmoid_derivative(&self.layer1)));
+           
+            d_weights1_total = d_weights1_total +  d_weights1;
+            d_weights2_total = d_weights2_total +  d_weights2;
+            cur = cur + 1;
+        }
+
+        self.weights1 = &self.weights1 + &(1_f32 * &d_weights1_total);
+        self.weights2 = &self.weights2 + &(1_f32 * &d_weights2_total);
     }
 
     // borrow the value to perform sigmoid derivative to one
@@ -172,7 +266,11 @@ impl Network {
         result
     }
 
+    fn sigmoid(x: f32) -> f32 {
+        1_f32 / (1_f32 + (-x).exp())
+    }
+
     fn sigmoid_derivative(x: f32) -> f32 {
-        sigmoid(x) * (1_f32 - sigmoid(x))
+        x * (1_f32 - x)
     }
 }
