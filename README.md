@@ -2,7 +2,9 @@
 Use AI to auto format slides based on existing odf slides
 
 ## To-do 
-* [ ] Implement simple NN to start training data
+* [x] Implement simple NN to start training data
+* [ ] Improve the NN to have two activation functions  
+* [ ] Start extracting features and train formatting data 
 
 ## Features
 * [x] Implement simple slide loader to get a list of elements already on it (getting a XML string)

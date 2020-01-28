@@ -41,7 +41,7 @@ mod tests {
         //0, 1, 1 -> 1,
         //1, 0, 1 -> 1,
         //1, 1, 1 -> 0
-
+        // This is simulating a three features input with a single output
         let x = arr2(&[[0_f32, 0_f32, 1_f32],
                          [0_f32, 1_f32, 1_f32],
                          [1_f32, 0_f32, 1_f32],
