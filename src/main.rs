@@ -10,6 +10,7 @@ use std::fs;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::path::Path;
+use std::str::from_utf8;
 use zip::write::FileOptions;
 
 // import neural network module
@@ -71,6 +72,9 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     return Ok(());
 }
 
+// Insead of doing in place update a better approach is to build 
+// data binding for each document format and then update it to 
+// save into odp files
 fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
     let mut rng = rand::thread_rng();
 
@@ -95,12 +99,19 @@ fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
                 // push existing elem along, but perform inplace update
                 // if attribute contains svg: like settings
                 // assuming them to be cm for now
+                let mut class_name = "N/A";
                 elem.extend_attributes(e.attributes().map(|attr| {
+                    //@Cleanup remove unwrap
                     let mut attribute = attr.unwrap();
-                    let key = std::str::from_utf8(attribute.key).unwrap();
+                    let key = from_utf8(attribute.key).unwrap();
+
+                    if key.contains("presentation:class") {
+                        class_name = from_utf8(attribute.value).unwrap();
+                    }
+
                     if key.contains("svg:") {
-                        let random_s: String = format!("{}cm", rng.gen_range(1, 20));
-                        println!("Setting {} to {}", key, random_s);
+                        let random_s: String = format!("{}cm", rng.gen_range(1, 10));
+                        println!("Setting {} from class {} : {} to {}", from_utf8(e.name()).unwrap(), class_name ,key, random_s);
                         attribute.value = Cow::Owned(random_s.into_bytes());
                     }
 
