@@ -99,22 +99,24 @@ fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
                 // push existing elem along, but perform inplace update
                 // if attribute contains svg: like settings
                 // assuming them to be cm for now
-                let mut class_name = "N/A";
                 elem.extend_attributes(e.attributes().map(|attr| {
                     //@Cleanup remove unwrap
-                    let mut attribute = attr.unwrap();
+                    let mut attribute: quick_xml::events::attributes::Attribute = attr.unwrap();
+                    let mut class_name = "N/A";
                     let key = from_utf8(attribute.key).unwrap();
 
-                    if key.contains("presentation:class") {
-                        class_name = from_utf8(attribute.value).unwrap();
-                    }
+                    {
+                        if key.contains("presentation:class") {
+                            class_name = from_utf8(&attribute.value).unwrap();
+                        }
 
-                    if key.contains("svg:") {
-                        let random_s: String = format!("{}cm", rng.gen_range(1, 10));
-                        println!("Setting {} from class {} : {} to {}", from_utf8(e.name()).unwrap(), class_name ,key, random_s);
-                        attribute.value = Cow::Owned(random_s.into_bytes());
+                        if key.contains("svg:") {
+                            let random_s: String = format!("{}cm", rng.gen_range(1, 10));
+                            println!("Setting {} from class {} : {} to {}", from_utf8(e.name()).unwrap(), class_name ,key, random_s);
+                            attribute.value = Cow::Owned(random_s.into_bytes());
+                        }
                     }
-
+                    
                     attribute
                 }));
 
