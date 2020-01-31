@@ -72,8 +72,8 @@ fn unzip_odf(file_name: &Path) -> Result<(), Box<dyn Error>> {
     return Ok(());
 }
 
-// Insead of doing in place update a better approach is to build 
-// data binding for each document format and then update it to 
+// Insead of doing in place update a better approach is to build
+// data binding for each document format and then update it to
 // save into odp files
 fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
     let mut rng = rand::thread_rng();
@@ -95,28 +95,40 @@ fn update_content_xml(xml_content_buffer: &str) -> std::vec::Vec<u8> {
                 // Let's copy it for now, not sure if it's feasible to
                 // do in place update
                 let mut elem = BytesStart::owned(e.name(), e.name().len());
+                let element_name = from_utf8(e.name()).unwrap();
 
                 // push existing elem along, but perform inplace update
                 // if attribute contains svg: like settings
                 // assuming them to be cm for now
+                //let mut class_name = "N/A";
+
+                let attributes_clone = e.attributes().clone();
+                attributes_clone.for_each(|attr| {
+                    let attr_found = attr.unwrap();
+                    if from_utf8(attr_found.key)
+                        .unwrap_or("")
+                        .contains("presentation:class")
+                    {
+                        let tmp_value = &attr_found.unescaped_value().unwrap();
+                        let class_name = from_utf8(tmp_value).unwrap();
+                        println!("Class name is {}", class_name);
+                    }
+                });
+
                 elem.extend_attributes(e.attributes().map(|attr| {
                     //@Cleanup remove unwrap
-                    let mut attribute: quick_xml::events::attributes::Attribute = attr.unwrap();
-                    let mut class_name = "N/A";
-                    let key = from_utf8(attribute.key).unwrap();
-
-                    {
-                        if key.contains("presentation:class") {
-                            class_name = from_utf8(&attribute.value).unwrap();
+                    let mut attribute = attr.unwrap();
+                    match from_utf8(attribute.key) {
+                        Ok(key) => {
+                            if key.starts_with("svg:") {
+                                let random_s: String = format!("{}cm", rng.gen_range(1, 10));
+                                println!("Setting {} : {} to {}", element_name, key, random_s);
+                                attribute.value = Cow::Owned(random_s.into_bytes());
+                            }
                         }
-
-                        if key.contains("svg:") {
-                            let random_s: String = format!("{}cm", rng.gen_range(1, 10));
-                            println!("Setting {} from class {} : {} to {}", from_utf8(e.name()).unwrap(), class_name ,key, random_s);
-                            attribute.value = Cow::Owned(random_s.into_bytes());
-                        }
+                        Err(e) => println!("{}", e),
                     }
-                    
+
                     attribute
                 }));
 
