@@ -105,14 +105,14 @@ fn update_content_xml(xml_content_buffer: &str) -> Result<std::vec::Vec<u8>, Box
         match t {
             XmlEvent::StartElement {
                 name,
-                attributes,
+                mut attributes,
                 namespace,
             } => {
                 // Randomize attribute with svg
                 let mut attrs: Vec<Attribute> = Vec::new();
-                for attribute in &attributes {
+                for mut attribute in attributes.iter_mut() {
                     // copy the value
-                    let mut copy_actual_value: String = String::from(&attribute.value);
+                    let copy_actual_value: String = String::from(&attribute.value);
 
                     // setup prefix
                     match &attribute.name.prefix {
@@ -120,14 +120,14 @@ fn update_content_xml(xml_content_buffer: &str) -> Result<std::vec::Vec<u8>, Box
                             if prefix == "svg" {
                                 if copy_actual_value.ends_with("cm") {
                                     let random_s = format!("{}cm", rng.gen_range(1, 10));
-                                    copy_actual_value = random_s;
+                                    attribute.value = random_s;
                                 }
                             }
                         }
                         None => {}
                     }
 
-                    attrs.push(Attribute::new(attribute.name.borrow(), &copy_actual_value));
+                    attrs.push(attribute.borrow());
                 }
 
                 writer.write(wXmlEvent::StartElement {
