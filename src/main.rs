@@ -14,6 +14,7 @@ use zip::write::FileOptions;
 
 // import neural network module
 mod nn;
+mod feature;
 
 fn main() {
     // interesting patterns to manipulate filename
