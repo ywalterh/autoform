@@ -26,6 +26,9 @@ mod tests {
         // test feed_forward_once
         result.feed_forward();
 
+        dbg!(result.loss);
+        assert_eq!(1, 0);
+
         // see if feed forward is working
         /*
         assert_ne!(result.layer1[[0, 0]], 0_f64);
@@ -59,6 +62,7 @@ pub struct Network2<'a> {
 // inspired by https://towardsdatascience.com/coding-a-2-layer-neural-network-from-scratch-in-python-4dd022d19fd2
 impl Network2<'_> {
     fn new<'a>(x: Array2<f64>, y: Array2<f64>) -> Network2<'a> {
+        let mut rng = rand::thread_rng();
         let mut dimensions = Vec::new();
         // number of neurons
         dimensions.push(15);
@@ -67,10 +71,12 @@ impl Network2<'_> {
         // output layer and second layer of neurons
         dimensions.push(1);
 
-        let weights1 = Array2::<f64>::zeros((dimensions[1], dimensions[0]));
-        let bias1 = Array2::<f64>::zeros((dimensions[1], 1));
-        let weights2 = Array2::<f64>::zeros((dimensions[2], dimensions[1]));
-        let bias2 = Array2::<f64>::zeros((dimensions[2], 1));
+        let weights1 = Array2::<f64>::zeros((dimensions[1], dimensions[0]))
+            .mapv(|_| rng.gen_range(0_f64, 1_f64));
+        let bias1 = Array2::<f64>::zeros((x.shape()[0], dimensions[0]));
+        let weights2 = Array2::<f64>::zeros((dimensions[0], dimensions[2]))
+            .mapv(|_| rng.gen_range(0_f64, 1_f64));
+        let bias2 = Array2::<f64>::zeros((x.shape()[0], dimensions[2]));
 
         let mut param = HashMap::new();
         param.insert("W1", weights1);
@@ -96,10 +102,10 @@ impl Network2<'_> {
 
     //Relu and Sigmoid functions activation
     fn feed_forward(&mut self) {
-        let z1 = self.param["W1"].dot(&self.input) + &self.param["B1"];
+        let z1 = self.input.dot(&self.param["W1"]) + &self.param["B1"];
         let a1 = z1.mapv(Network2::relu);
 
-        let z2 = self.param["W2"].dot(&a1) + &self.param["B2"];
+        let z2 = a1.dot(&self.param["W2"]) + &self.param["B2"];
         let a2 = z2.mapv(Network2::sigmoid);
 
         self.output = a2.to_owned();
