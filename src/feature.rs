@@ -23,8 +23,8 @@ fn extra_features(xml_content_buffer: &str) -> Result<Vec<Feature>, Box<dyn Erro
     for e in parser {
         match e {
             Ok(XmlEvent::StartElement {
-                   name, attributes, ..
-               }) => {
+                name, attributes, ..
+            }) => {
                 let mut attrs: Vec<Attribute> = Vec::new();
                 for mut attribute in attributes.iter() {}
                 break;
@@ -52,7 +52,7 @@ mod tests {
         let file = File::open("test_data/content.xml").unwrap();
         // can we use the same variable name?
         let mut file = BufReader::new(file);
-        let mut file_content: String;
+        let mut file_content: String = String::new();
         file.read_to_string(&mut file_content);
         let result = extra_features(file_content.as_str()).unwrap();
         let title = &result[0];

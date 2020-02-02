@@ -14,6 +14,7 @@ use zip::write::FileOptions;
 
 // import neural network module
 mod nn;
+mod nn2;
 mod feature;
 
 fn main() {
