@@ -118,8 +118,13 @@ impl Network2<'_> {
         self.loss = self.nloss();
     }
 
+    // the Cross-Entropy Loss Function
+    // not sure if I did it correctly or not
     fn nloss(&mut self) -> Array2<f64> {
-        return &self.y - &self.output;
+        return (1_f64 / self.sample_size as f64)
+            * (0_f64
+                - &self.y.dot(&(self.output.mapv(f64::ln).t()))
+                - &(1_f64 - &self.y).dot(&((1_f64 - &self.output).mapv_into(f64::ln).t())));
     }
 
     #[allow(dead_code)]
