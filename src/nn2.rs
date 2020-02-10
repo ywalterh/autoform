@@ -25,7 +25,7 @@ mod tests {
 
         // test feed_forward_once
         // training
-        for _ in 1..25 {
+        for _ in 1..3 {
             result.feed_forward();
             result.back_propagation();
         }
@@ -88,7 +88,7 @@ impl Network2<'_> {
             dimensions,
             cache: HashMap::new(),
 
-            learning_rate: 0.01_f64,
+            learning_rate: 0.003_f64,
             sample_size: 3,
             loss: Array2::<f64>::zeros((y_shape[1], 1)),
         }
@@ -114,28 +114,17 @@ impl Network2<'_> {
 
     fn back_propagation(&mut self) {
         // d means delta here
-        let d_loss_output =
-            -(&self.y / &self.output) - ((1_f64 - &self.y) / (1_f64 - &self.output));
+        let d_loss_output = -(&self.y / &self.output - (1_f64 - &self.y) / (1_f64 - &self.output));
         //@Cleanup remove unwrap
-        let d_loss_z2 = d_loss_output
-            * self
-                .cache
-                .get("Z2")
-                .unwrap()
-                .mapv(Network2::sigmoid_derivative);
-        let d_loss_a1 = d_loss_z2.dot(&self.param.get("W2").unwrap().t());
-        let d_loss_w2 = 1_f64 / self.cache["A1"].shape()[0] as f64
-            * self.cache.get("A1").unwrap().t().dot(&d_loss_z2);
+        let d_loss_z2 = d_loss_output * self.cache["Z2"].mapv(Network2::sigmoid_derivative);
+        let d_loss_a1 = d_loss_z2.dot(&self.param["W2"].t());
+        let d_loss_w2 =
+            1_f64 / self.cache["A1"].shape()[0] as f64 * self.cache["A1"].t().dot(&d_loss_z2);
         let d_loss_b2 = 1_f64 / self.cache["A1"].shape()[0] as f64
             * Array2::ones((1, d_loss_z2.shape()[0])).dot(&d_loss_z2);
 
-        let d_loss_z1 = d_loss_a1
-            * self
-                .cache
-                .get("Z1")
-                .unwrap()
-                .mapv(Network2::relu_derivative);
-        let d_loss_a0 = d_loss_z1.dot(&self.param.get("W1").unwrap().t());
+        let d_loss_z1 = d_loss_a1 * self.cache["Z1"].mapv(Network2::relu_derivative);
+        let d_loss_a0 = d_loss_z1.dot(&self.param["W1"].t());
         let d_loss_w1 = 1_f64 / self.input.shape()[0] as f64 * self.input.t().dot(&d_loss_z1);
         let d_loss_b1 = 1_f64 / self.input.shape()[0] as f64
             * Array2::ones((1, d_loss_z1.shape()[0])).dot(&d_loss_z1);
@@ -156,8 +145,6 @@ impl Network2<'_> {
             "B2",
             self.param.get("B2").unwrap() - &(self.learning_rate * d_loss_b2),
         );
-
-        dbg!(&self.param);
     }
 
     // the Cross-Entropy Loss Function
@@ -166,7 +153,7 @@ impl Network2<'_> {
         return (1_f64 / self.sample_size as f64)
             * (0_f64
                 - &self.y.dot(&(self.output.mapv(f64::ln).t()))
-                - &(1_f64 - &self.y).dot(&((1_f64 - &self.output).mapv_into(f64::ln).t())));
+                - &(1_f64 - &self.y).dot(&((1_f64 - &self.output).mapv(f64::ln).t())));
     }
 
     #[allow(dead_code)]
