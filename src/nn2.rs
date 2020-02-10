@@ -10,7 +10,7 @@ mod tests {
     use ndarray::arr2;
 
     #[test]
-    fn test_new_network2() {
+    fn test_new_2() {
         let x = arr2(&[
             [0_f64, 0_f64, 1_f64],
             [0_f64, 1_f64, 1_f64],
@@ -25,12 +25,39 @@ mod tests {
 
         // test feed_forward_once
         // training
-        for _ in 1..3 {
-            result.feed_forward();
-            result.back_propagation();
+        result.feed_forward();
+        result.back_propagation();
+    }
+
+    #[test]
+    fn test_training_2() {
+        let x = arr2(&[
+            [0_f64, 0_f64, 1_f64],
+            [0_f64, 1_f64, 1_f64],
+            [1_f64, 0_f64, 1_f64],
+            [1_f64, 1_f64, 1_f64],
+        ]);
+
+        let y = arr2(&[[0_f64], [1_f64], [1_f64], [0_f64]]);
+        let mut network = Network2::new(x, y);
+
+        // test feed_forward_once
+        // training
+        for _ in 1..10000 {
+            network.feed_forward();
+            network.back_propagation();
         }
-        dbg!(result.output);
-        assert_eq!(1, 0);
+
+        // calculate means to make sure it's smaller than 0.001
+        let cost_square = (network.y - network.output).mapv(square);
+        let mean = cost_square.sum() / cost_square.len() as f64;
+
+        println!("{}", mean);
+        assert!(mean < 0.001_f64);
+    }
+
+    fn square(x: f64) -> f64 {
+        x * x
     }
 }
 
@@ -88,7 +115,7 @@ impl Network2<'_> {
             dimensions,
             cache: HashMap::new(),
 
-            learning_rate: 0.003_f64,
+            learning_rate: 0.03_f64,
             sample_size: 3,
             loss: Array2::<f64>::zeros((y_shape[1], 1)),
         }
@@ -118,16 +145,17 @@ impl Network2<'_> {
         //@Cleanup remove unwrap
         let d_loss_z2 = d_loss_output * self.cache["Z2"].mapv(Network2::sigmoid_derivative);
         let d_loss_a1 = d_loss_z2.dot(&self.param["W2"].t());
+        // bias is the same as weight but only multply by one neglecting the affect of last layer
         let d_loss_w2 =
             1_f64 / self.cache["A1"].shape()[0] as f64 * self.cache["A1"].t().dot(&d_loss_z2);
         let d_loss_b2 = 1_f64 / self.cache["A1"].shape()[0] as f64
-            * Array2::ones((1, d_loss_z2.shape()[0])).dot(&d_loss_z2);
+            * Array2::ones((d_loss_a1.shape()[0], d_loss_z2.shape()[0])).dot(&d_loss_z2);
 
         let d_loss_z1 = d_loss_a1 * self.cache["Z1"].mapv(Network2::relu_derivative);
         let d_loss_a0 = d_loss_z1.dot(&self.param["W1"].t());
         let d_loss_w1 = 1_f64 / self.input.shape()[0] as f64 * self.input.t().dot(&d_loss_z1);
         let d_loss_b1 = 1_f64 / self.input.shape()[0] as f64
-            * Array2::ones((1, d_loss_z1.shape()[0])).dot(&d_loss_z1);
+            * Array2::ones((d_loss_a0.shape()[0], d_loss_z1.shape()[0])).dot(&d_loss_z1);
 
         self.param.insert(
             "W1",

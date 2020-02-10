@@ -59,13 +59,10 @@ mod tests {
             network.feed_forward();
             network.back_propagation();
         }
-        println!("Actual:\n {}", network.y);
-        println!("Predication:\n {}", network.output);
 
         // calculate means to make sure it's smaller than 0.001
         let cost_square = (network.y - network.output).mapv(square);
         let mean = cost_square.sum() / cost_square.len() as f32;
-        println!("Loss is :\n {}", mean);
         assert!(mean < 0.001_f32);
     }
 
