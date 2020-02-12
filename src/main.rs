@@ -13,9 +13,9 @@ use xml::writer::XmlEvent as wXmlEvent;
 use zip::write::FileOptions;
 
 // import neural network module
+mod feature;
 mod nn;
 mod nn2;
-mod feature;
 
 fn main() {
     // interesting patterns to manipulate filename

@@ -17,6 +17,7 @@ pub struct Feature {
     table_row: u8,
 }
 
+#[allow(dead_code)]
 fn extra_features(xml_content_buffer: &str) -> Result<Vec<Feature>, Box<dyn Error>> {
     let parser = EventReader::from_str(xml_content_buffer);
 
@@ -53,8 +54,9 @@ mod tests {
         // can we use the same variable name?
         let mut file = BufReader::new(file);
         let mut file_content: String = String::new();
-        file.read_to_string(&mut file_content);
+        file.read_to_string(&mut file_content).unwrap();
         let result = extra_features(file_content.as_str()).unwrap();
+        assert!(result.len() > 2);
         let title = &result[0];
         let sub_title = &result[1];
         let table = &result[2];

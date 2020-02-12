@@ -64,6 +64,7 @@ mod tests {
 // two layer neural network implementation
 // extend to run arbitrary number of layers
 // also increase to f64
+#[derive(Debug, Default)]
 pub struct Network2<'a> {
     input: Array2<f64>,
     y: Array2<f64>,
@@ -82,6 +83,7 @@ pub struct Network2<'a> {
 
 // inspired by https://towardsdatascience.com/coding-a-2-layer-neural-network-from-scratch-in-python-4dd022d19fd2
 impl Network2<'_> {
+    #[allow(dead_code)]
     fn new<'a>(x: Array2<f64>, y: Array2<f64>) -> Network2<'a> {
         let mut rng = rand::thread_rng();
         let mut dimensions = Vec::new();
@@ -122,6 +124,7 @@ impl Network2<'_> {
     }
 
     //Relu and Sigmoid functions activation
+    #[allow(dead_code)]
     fn feed_forward(&mut self) {
         let z1 = self.input.dot(&self.param["W1"]) + &self.param["B1"];
         let a1 = z1.mapv(Network2::relu);
@@ -139,6 +142,7 @@ impl Network2<'_> {
         self.loss = self.nloss();
     }
 
+    #[allow(dead_code)]
     fn back_propagation(&mut self) {
         // d means delta here
         let d_loss_output = -(&self.y / &self.output - (1_f64 - &self.y) / (1_f64 - &self.output));
@@ -184,7 +188,6 @@ impl Network2<'_> {
                 - &(1_f64 - &self.y).dot(&((1_f64 - &self.output).mapv(f64::ln).t())));
     }
 
-    #[allow(dead_code)]
     fn sigmoid(x: f64) -> f64 {
         1_f64 / (1_f64 + (-x).exp())
     }
